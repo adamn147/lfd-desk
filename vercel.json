@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "api/extract.js": { "maxDuration": 60 },
+    "api/draft.js": { "maxDuration": 60 }
+  }
+}

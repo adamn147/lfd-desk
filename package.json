@@ -1,0 +1,14 @@
+{
+  "name": "lfd-desk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Container & paperwork assistant for small warehouses",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "node dev/server.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0"
+  }
+}

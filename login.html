@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>LFD Desk · Log in</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#eaeef2;--surface:#fff;--ink:#15202b;--muted:#566473;--line:#d3dae2;--accent:#1b5ea8;--accent-ink:#fff;--crit:#bf3227;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;--f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme: dark){:root{--bg:#0f141a;--surface:#171f28;--ink:#e4eaf0;--muted:#97a5b4;--line:#2b3744;--accent:#62a0e4;--accent-ink:#0b1622;--crit:#ff6f62;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;display:grid;place-items:center;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+form{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--f-display);font-size:34px;margin:0;line-height:1;border-bottom:3px solid var(--ink);padding-bottom:10px}
+p{margin:0;color:var(--muted);font-size:14px}
+label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+input{font:inherit;color:inherit;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface);width:100%}
+button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:11px 14px;background:var(--accent);color:var(--accent-ink);cursor:pointer;min-height:44px}
+button:disabled{opacity:.6}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.err{color:var(--crit);font-size:14px;min-height:1.2em}
+</style>
+</head>
+<body>
+<form id="f">
+  <h1>LFD Desk</h1>
+  <p>Container &amp; paperwork assistant</p>
+  <div style="display:flex;flex-direction:column;gap:4px">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password" required autofocus>
+  </div>
+  <button id="go" type="submit">Log in</button>
+  <div class="err" id="err" role="alert"></div>
+</form>
+<script>
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const go = document.getElementById("go"), err = document.getElementById("err");
+  go.disabled = true; err.textContent = "";
+  try {
+    const r = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+      body: JSON.stringify({ password: document.getElementById("pw").value }) });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) { location.href = "/"; return; }
+    err.textContent = data.error || "Login failed.";
+  } catch { err.textContent = "Can't reach the server. Check your connection."; }
+  go.disabled = false;
+});
+</script>
+</body>
+</html>

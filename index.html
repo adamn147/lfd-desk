@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>LFD Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: operations console. KPI strip on top, scan + alerts column beside the container board; stacks on phones. */
+:root{
+  --bg:#eaeef2; --surface:#ffffff; --surface-2:#f4f6f9; --ink:#15202b; --muted:#566473; --line:#d3dae2;
+  --accent:#1b5ea8; --accent-ink:#ffffff; --accent-soft:#e1ecf8;
+  --ok:#1d7548; --ok-bg:#e2f3ea; --warn:#9a5d00; --warn-bg:#fdf0d8; --crit:#bf3227; --crit-bg:#fbe5e2; --on-strong:#ffffff;
+  --done:#6b7785; --done-bg:#eef1f4;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f141a; --surface:#171f28; --surface-2:#1d2732; --ink:#e4eaf0; --muted:#97a5b4; --line:#2b3744;
+  --accent:#62a0e4; --accent-ink:#0b1622; --accent-soft:#1c3045;
+  --ok:#55c891; --ok-bg:#15301f; --warn:#f2ad45; --warn-bg:#352812; --crit:#ff6f62; --crit-bg:#3a1916; --on-strong:#120808;
+  --done:#8796a6; --done-bg:#1d2630; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141a; --surface:#171f28; --surface-2:#1d2732; --ink:#e4eaf0; --muted:#97a5b4; --line:#2b3744;
+  --accent:#62a0e4; --accent-ink:#0b1622; --accent-soft:#1c3045;
+  --ok:#55c891; --ok-bg:#15301f; --warn:#f2ad45; --warn-bg:#352812; --crit:#ff6f62; --crit-bg:#3a1916; --on-strong:#120808;
+  --done:#8796a6; --done-bg:#1d2630; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+h1{font-size:34px;line-height:1}
+h2{font-size:22px;line-height:1.1}
+.mono{font-family:var(--f-mono)}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:500;min-height:40px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.sm{min-height:32px;padding:4px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.danger{color:var(--crit)}
+/* header */
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:3px solid var(--ink);padding-bottom:12px}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:2px 6px;color:var(--muted)}
+.today{font-family:var(--f-mono);font-size:13px;color:var(--muted);text-align:right}
+.banner{background:var(--warn-bg);color:var(--ink);border-radius:8px;padding:10px 14px;font-size:14px}
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.kpi .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.kpi .val{font-family:var(--f-display);font-size:38px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi .sub{font-size:12px;color:var(--muted)}
+.kpi.warn .val{color:var(--warn)} .kpi.crit .val{color:var(--crit)}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi .val{font-size:30px}}
+/* layout */
+.layout{display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:920px){.layout{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.steps{display:flex;flex-wrap:wrap;gap:6px;list-style:none;padding:0;margin:0}
+.steps li{font-size:12px;background:var(--surface-2);border-radius:999px;padding:3px 10px;color:var(--muted)}
+.steps b{font-family:var(--f-mono);color:var(--ink);margin-right:4px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:10px;align-items:center;background:var(--surface-2)}
+.drop.over{border-color:var(--accent)}
+.drop img{max-height:260px;width:auto;border-radius:6px;border:1px solid var(--line);background:#fff}
+.drop .hint{font-size:13px;color:var(--muted);text-align:center;padding:18px 8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.status{font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spinner{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+/* form */
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+.field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.field.wide{grid-column:1/-1}
+.field label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select{border:1px solid var(--line);border-radius:6px;padding:7px 9px;background:var(--surface);min-width:0;width:100%}
+.field.unclear input{border-color:var(--warn);background:var(--warn-bg)}
+.field .note{font-size:12px}
+.note.bad{color:var(--crit)} .note.good{color:var(--ok)}
+.review-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px}
+/* board */
+.board{display:flex;flex-direction:column;gap:8px}
+.crow{display:grid;grid-template-columns:92px minmax(0,1fr) auto;gap:14px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface)}
+.crow.done{opacity:.72}
+.days{border-radius:8px;padding:8px 4px;text-align:center;display:flex;flex-direction:column;justify-content:center;min-height:68px}
+.days .n{font-family:var(--f-display);font-size:30px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.days .u{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.sev-overdue{background:var(--crit);color:var(--on-strong)}
+.sev-critical{background:var(--crit-bg);color:var(--crit);box-shadow:inset 0 0 0 2px var(--crit)}
+.sev-warn{background:var(--warn-bg);color:var(--warn)}
+.sev-ok{background:var(--ok-bg);color:var(--ok)}
+.sev-done,.sev-unknown{background:var(--done-bg);color:var(--done)}
+.cinfo{display:flex;flex-direction:column;gap:3px;min-width:0}
+.cn{font-family:var(--f-mono);font-weight:600;font-size:16px;letter-spacing:.02em;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cn .bad{font-family:var(--f-body);font-size:11px;color:var(--crit);font-weight:600}
+.meta{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.meta strong{color:var(--ink);font-weight:600}
+.pill{font-family:var(--f-body);font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--surface-2);color:var(--muted);letter-spacing:.03em}
+.pill.blue{background:var(--accent-soft);color:var(--accent)}
+.cact{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+@media (max-width:560px){.crow{grid-template-columns:76px minmax(0,1fr)}.cact{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}.days .n{font-size:26px}}
+.empty{border:2px dashed var(--line);border-radius:10px;padding:26px 16px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;color:var(--muted)}
+/* alerts */
+.phone{background:var(--surface-2);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.phone .to{font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.sms{background:var(--surface);border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:9px 12px;font-size:14px;max-width:95%}
+.sms.crit{border-color:var(--crit)}
+.rate{display:flex;align-items:center;gap:8px;font-size:14px;flex-wrap:wrap}
+.rate input{width:90px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--surface)}
+textarea{width:100%;min-height:220px;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--surface-2);resize:vertical;line-height:1.5}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+footer{font-size:12px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>LFD Desk</h1>
+      <span class="muted">Container &amp; paperwork assistant for Inland Empire warehouses</span>
+    </div>
+    <div class="row"><div class="today" id="today"></div><button class="btn sm" id="logout">Log out</button></div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="kpis" aria-label="Summary">
+    <div class="kpi"><span class="lbl">At terminal</span><span class="val" id="k-open">–</span><span class="sub">containers not yet picked up</span></div>
+    <div class="kpi warn"><span class="lbl">Due in 48 hrs</span><span class="val" id="k-soon">–</span><span class="sub">LFD today through 2 days out</span></div>
+    <div class="kpi crit"><span class="lbl">Past LFD</span><span class="val" id="k-over">–</span><span class="sub">now paying demurrage</span></div>
+    <div class="kpi crit"><span class="lbl">Demurrage so far</span><span class="val" id="k-cost">–</span><span class="sub" id="k-cost-sub">estimate</span></div>
+  </section>
+
+  <div class="layout">
+    <div class="col">
+      <section class="panel" aria-labelledby="scan-h">
+        <div class="panel-head"><h2 id="scan-h">Scan a document</h2></div>
+        <ol class="steps">
+          <li><b>1</b>Snap a photo</li><li><b>2</b>AI reads it</li><li><b>3</b>You check it</li><li><b>4</b>On the board</li>
+        </ol>
+        <div>
+          <div class="small muted" style="margin-bottom:6px">Try a sample document:</div>
+          <div class="chips" id="samples"></div>
+        </div>
+        <div class="drop" id="drop">
+          <img id="preview" alt="Document preview" hidden>
+          <div class="hint" id="drop-hint">Take a photo of a delivery order, arrival notice or BOL, or drop an image here.</div>
+          <div class="row">
+            <label class="btn" for="file">Take photo / upload</label>
+            <input type="file" id="file" accept="image/*" hidden>
+            <button class="btn primary" id="read" disabled>Read with AI</button>
+          </div>
+        </div>
+        <div class="status" id="status" hidden></div>
+        <button class="btn sm" id="manual" style="align-self:flex-start">Enter manually instead</button>
+
+        <div id="review" hidden>
+          <div class="review-head">
+            <h3 style="font-size:19px">Check before adding</h3>
+            <span class="small muted" id="review-note"></span>
+          </div>
+          <form class="form" id="form" autocomplete="off" style="margin-top:10px">
+            <div class="field wide" data-f="container_no"><label for="f-container_no">Container #</label><input id="f-container_no" class="mono" placeholder="ABCU1234567"><span class="note" id="cn-note"></span></div>
+            <div class="field" data-f="size_type"><label for="f-size_type">Size / type</label><input id="f-size_type" placeholder="40HC"></div>
+            <div class="field" data-f="last_free_day"><label for="f-last_free_day">Last free day</label><input id="f-last_free_day" type="date"></div>
+            <div class="field wide" data-f="customer"><label for="f-customer">Customer / consignee</label><input id="f-customer"></div>
+            <div class="field" data-f="carrier"><label for="f-carrier">Steamship line</label><input id="f-carrier"></div>
+            <div class="field" data-f="terminal"><label for="f-terminal">Terminal</label><input id="f-terminal"></div>
+            <div class="field" data-f="reference"><label for="f-reference">PO / reference</label><input id="f-reference"></div>
+            <div class="field" data-f="seal_no"><label for="f-seal_no">Seal #</label><input id="f-seal_no" class="mono"></div>
+            <div class="field" data-f="pieces"><label for="f-pieces">Pieces</label><input id="f-pieces"></div>
+            <div class="field" data-f="weight"><label for="f-weight">Weight</label><input id="f-weight"></div>
+            <div class="field wide" data-f="vessel_voyage"><label for="f-vessel_voyage">Vessel / voyage</label><input id="f-vessel_voyage"></div>
+            <div class="row" style="grid-column:1/-1">
+              <button class="btn primary" type="submit" id="add">Add to board</button>
+              <button class="btn" type="button" id="cancel">Discard</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="alert-h">
+        <div class="panel-head"><h2 id="alert-h">Morning text alert</h2><span class="small muted">7:00 AM daily</span></div>
+        <div class="rate"><label for="rate">Demurrage estimate</label>$<input id="rate" type="number" min="0" step="5"> per container per day</div>
+        <div class="phone" id="phone"></div>
+        <p class="small muted" style="margin:0">Preview. In a live setup these go to the ops manager by text and email, with no app to open.</p>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" aria-labelledby="board-h">
+        <div class="panel-head">
+          <h2 id="board-h">Container board</h2>
+          <div class="row"><span class="small muted">Sorted by days until LFD</span><button class="btn sm" id="reset">Reset example data</button></div>
+        </div>
+        <div class="board" id="board"><div class="empty">Loading board…</div></div>
+      </section>
+
+      <section class="panel" id="update-panel" aria-labelledby="upd-h" hidden>
+        <div class="panel-head"><h2 id="upd-h">Customer update</h2><span class="small muted" id="upd-for"></span></div>
+        <textarea id="upd-text" aria-label="Draft customer email"></textarea>
+        <div class="row"><button class="btn primary" id="upd-copy">Copy</button><button class="btn" id="upd-close">Close</button><span class="small muted">Review before sending.</span></div>
+      </section>
+    </div>
+  </div>
+  <footer>Sample documents, companies and containers on this page are fictional. Demurrage figures are estimates; actual charges follow each terminal's tariff.</footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- dates ---------- */
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const addDays = n => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() + n); return d; };
+const todayStr = () => ymd(new Date());
+function daysUntil(s){
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s || "")) return null;
+  const [y,m,d] = s.split("-").map(Number), t = new Date();
+  return Math.round((Date.UTC(y,m-1,d) - Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())) / 864e5);
+}
+function shortDate(s){
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s || "")) return "—";
+  const [y,m,d] = s.split("-").map(Number);
+  return new Date(y,m-1,d).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+}
+const mmdd = s => s ? s.slice(5).replace("-", "/") : "";
+
+/* ---------- ISO 6346 container check digit ---------- */
+const LV = {}; { let v = 10; for (const c of "ABCDEFGHIJKLMNOPQRSTUVWXYZ"){ if (v % 11 === 0) v++; LV[c] = v++; } }
+const checkDigit = p => { let s = 0; for (let i = 0; i < 10; i++) s += (i < 4 ? LV[p[i]] : +p[i]) * 2 ** i; return s % 11 % 10; };
+const normCN = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+function cnState(raw){
+  const cn = normCN(raw);
+  if (!cn) return "empty";
+  if (!/^[A-Z]{3}[UJZ]\d{7}$/.test(cn)) return "format";
+  return checkDigit(cn.slice(0,10)) === +cn[10] ? "ok" : "check";
+}
+const makeCN = p => p + checkDigit(p);
+
+/* ---------- state ---------- */
+let rows = [];
+const STORE = "lfd-rows";
+function persist(){ try { localStorage.setItem(STORE, JSON.stringify(rows)); } catch {} }
+function loadSaved(){ try { const raw = localStorage.getItem(STORE); if (raw !== null) return JSON.parse(raw); } catch {} return null; }
+
+/* ---------- server calls ---------- */
+async function api(path, body, signal){
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}), signal, credentials: "same-origin" });
+  let data = {}; try { data = await r.json(); } catch {}
+  if (r.status === 401 && path !== "/api/logout"){ location.href = "/login.html"; throw new Error("Please log in again."); }
+  if (!r.ok) throw new Error(data.error || "Something went wrong. Try again.");
+  return data;
+}
+async function toJpegBase64(blob, max = 1600){
+  let src, w, h;
+  try { src = await createImageBitmap(blob, { imageOrientation: "from-image" }); w = src.width; h = src.height; }
+  catch { src = new Image(); src.src = URL.createObjectURL(blob); await src.decode(); w = src.naturalWidth; h = src.naturalHeight; }
+  const s = Math.min(1, max / Math.max(w, h)), c = document.createElement("canvas");
+  c.width = Math.round(w * s); c.height = Math.round(h * s);
+  c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+  const url = c.toDataURL("image/jpeg", 0.85);
+  return url.slice(url.indexOf(",") + 1);
+}
+let rate = 175;
+try { const r = +localStorage.getItem("lfd-rate"); if (r > 0) rate = r; } catch {}
+$("#rate").value = rate;
+$("#today").textContent = new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 3200); }
+
+function exampleRows(){
+  const base = (cn, o) => ({ container_no: cn, status: "at_terminal", source: "example", created: Date.now(), terminal: "", vessel_voyage: "", seal_no: "", pieces: "", weight: "", reference: "", ...o });
+  return [
+    base("KSTU3302180", { size_type:"40HC", customer:"Coastal Patio Imports", carrier:"Meridian Ocean Lines", terminal:"Harbor Terminal 3", last_free_day: ymd(addDays(2)), reference:"CPI-88412", pieces:"960 CTNS" }),
+    base("MDVU7710456", { size_type:"45HC", customer:"Inland Auto Parts", carrier:"Bluewater Container Line", terminal:"Pier South", last_free_day: ymd(addDays(8)), reference:"IAP-20931", pieces:"22 PLTS" }),
+    base("GSLU6041174", { size_type:"20GP", customer:"Valley Cycle Supply Inc", carrier:"Bluewater Container Line", terminal:"Pier South", last_free_day: ymd(addDays(-2)), reference:"VCS-4471", pieces:"310 CTNS" }),
+    base("OCRU5581027", { size_type:"40GP", customer:"Sunrise Home Goods LLC", carrier:"Meridian Ocean Lines", terminal:"Harbor Terminal 3", last_free_day: ymd(addDays(-1)), status:"picked_up", reference:"SHG-55087", pieces:"1,120 CTNS" }),
+  ];
+}
+
+/* ---------- render ---------- */
+function sev(r){
+  if (r.status !== "at_terminal") return "done";
+  const d = daysUntil(r.last_free_day);
+  if (d === null) return "unknown";
+  if (d < 0) return "overdue";
+  if (d <= 1) return "critical";
+  if (d <= 3) return "warn";
+  return "ok";
+}
+function daysBlock(r){
+  const d = daysUntil(r.last_free_day), s = sev(r);
+  if (s === "done") return `<div class="days sev-done"><span class="n">✓</span><span class="u">${r.status === "delivered" ? "Delivered" : "Picked up"}</span></div>`;
+  if (d === null) return `<div class="days sev-unknown"><span class="n">?</span><span class="u">No LFD</span></div>`;
+  if (d < 0) return `<div class="days sev-overdue"><span class="n">${-d}</span><span class="u">day${d===-1?"":"s"} over</span></div>`;
+  if (d === 0) return `<div class="days sev-critical"><span class="n">0</span><span class="u">LFD today</span></div>`;
+  return `<div class="days sev-${s}"><span class="n">${d}</span><span class="u">day${d===1?"":"s"} left</span></div>`;
+}
+function sorted(){
+  return [...rows].sort((a,b) => {
+    const da = a.status === "at_terminal" ? 0 : 1, dbb = b.status === "at_terminal" ? 0 : 1;
+    if (da !== dbb) return da - dbb;
+    const x = daysUntil(a.last_free_day), y = daysUntil(b.last_free_day);
+    return (x ?? 9999) - (y ?? 9999);
+  });
+}
+function render(){
+  const open = rows.filter(r => r.status === "at_terminal");
+  const soon = open.filter(r => { const d = daysUntil(r.last_free_day); return d !== null && d >= 0 && d <= 2; });
+  const over = open.filter(r => { const d = daysUntil(r.last_free_day); return d !== null && d < 0; });
+  const overDays = over.reduce((s,r) => s - daysUntil(r.last_free_day), 0);
+  $("#k-open").textContent = open.length;
+  $("#k-soon").textContent = soon.length;
+  $("#k-over").textContent = over.length;
+  $("#k-cost").textContent = "$" + (overDays * rate).toLocaleString();
+  $("#k-cost-sub").textContent = `${overDays} container-day${overDays===1?"":"s"} × $${rate}`;
+
+  const b = $("#board");
+  if (!rows.length){
+    b.innerHTML = `<div class="empty"><strong style="color:var(--ink)">No containers on the board yet</strong><span>Scan a delivery order on the left, or load example containers to see how the board works.</span><button class="btn" data-act="examples">Load example containers</button></div>`;
+  } else {
+    b.innerHTML = sorted().map(r => {
+      const st = cnState(r.container_no), done = r.status !== "at_terminal";
+      const id = esc(r._id || normCN(r.container_no));
+      return `<div class="crow ${done ? "done" : ""}">
+        ${daysBlock(r)}
+        <div class="cinfo">
+          <div class="cn">${esc(r.container_no)} ${r.size_type ? `<span class="pill">${esc(r.size_type)}</span>` : ""}${r.source === "example" ? `<span class="pill">Example</span>` : ""}${r.source === "scan" ? `<span class="pill blue">Scanned</span>` : ""}${st === "check" ? `<span class="bad">Check digit mismatch</span>` : ""}</div>
+          <div class="meta"><strong>${esc(r.customer || "No customer")}</strong>${r.reference ? " · " + esc(r.reference) : ""}${r.pieces ? " · " + esc(r.pieces) : ""}</div>
+          <div class="meta">LFD <strong>${shortDate(r.last_free_day)}</strong>${r.carrier ? " · " + esc(r.carrier) : ""}${r.terminal ? " · " + esc(r.terminal) : ""}</div>
+        </div>
+        <div class="cact">
+          ${done ? `<button class="btn sm" data-act="undo" data-id="${id}">Back to terminal</button>` : `<button class="btn sm" data-act="pickup" data-id="${id}">Mark picked up</button>`}
+          <button class="btn sm" data-act="update" data-id="${id}">Draft customer email</button>
+          <button class="btn sm danger" data-act="remove" data-id="${id}">Remove</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  renderAlerts(open);
+}
+function renderAlerts(open){
+  const hot = open.map(r => ({ r, d: daysUntil(r.last_free_day) })).filter(x => x.d !== null && x.d <= 2).sort((a,b) => a.d - b.d);
+  const p = $("#phone");
+  let html = `<div class="to">To: Ops manager · (555) 010-0142</div>`;
+  if (!hot.length) html += `<div class="sms">LFD Desk: all clear. No containers due in the next 2 days.</div>`;
+  for (const { r, d } of hot){
+    const who = `${normCN(r.container_no)} (${r.size_type || "ctr"}, ${r.customer || "no customer"})`;
+    let msg;
+    if (d < 0) msg = `${who} is ${-d} day${d===-1?"":"s"} past LFD ${mmdd(r.last_free_day)}. Est. demurrage so far ~$${(-d*rate).toLocaleString()}. Pick up today.`;
+    else if (d === 0) msg = `${who}: LFD is TODAY (${mmdd(r.last_free_day)}). Pick up today to avoid ~$${rate}/day.`;
+    else msg = `${who}: LFD ${d === 1 ? "tomorrow" : "in 2 days"} (${mmdd(r.last_free_day)}). Book a driver and terminal appointment.`;
+    html += `<div class="sms ${d <= 0 ? "crit" : ""}">LFD Desk: ${esc(msg)}</div>`;
+  }
+  p.innerHTML = html;
+}
+
+/* ---------- storage ---------- */
+async function saveRow(r){
+  const id = normCN(r.container_no) || ("manual-" + Date.now());
+  const clean = { ...r }; delete clean._id;
+  const i = rows.findIndex(x => (x._id || normCN(x.container_no)) === id);
+  if (i >= 0) rows[i] = { ...clean, _id: id }; else rows.push({ ...clean, _id: id });
+  persist(); render();
+  return id;
+}
+async function patchRow(id, patch){
+  const r = rows.find(x => (x._id || normCN(x.container_no)) === id); if (r) Object.assign(r, patch);
+  persist(); render();
+}
+async function removeRow(id){
+  rows = rows.filter(x => (x._id || normCN(x.container_no)) !== id);
+  persist(); render();
+}
+async function loadExamples(){
+  const btn = $("#reset"); btn.disabled = true;
+  try {
+    for (const r of rows.filter(x => x.source === "example")) await removeRow(r._id || normCN(r.container_no));
+    for (const r of exampleRows()) await saveRow(r);
+    toast("Example containers loaded with dates relative to today.");
+  } catch (e) { toast("Couldn't load examples: " + (e?.message || "try again")); }
+  btn.disabled = false;
+}
+
+/* ---------- board actions ---------- */
+let armed = null;
+$("#board").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const act = b.dataset.act, id = b.dataset.id;
+  try {
+    if (act === "examples") return loadExamples();
+    if (act === "pickup") { await patchRow(id, { status: "picked_up" }); toast("Marked picked up."); }
+    if (act === "undo") { await patchRow(id, { status: "at_terminal" }); }
+    if (act === "update") draftUpdate(id);
+    if (act === "remove"){
+      if (armed === b){ armed = null; await removeRow(id); toast("Removed."); }
+      else { armed = b; b.textContent = "Tap again to remove"; setTimeout(() => { if (armed === b){ armed = null; b.textContent = "Remove"; } }, 3000); }
+    }
+  } catch (err) { toast("That didn't save: " + (err?.message || "try again")); }
+});
+$("#reset").addEventListener("click", loadExamples);
+$("#rate").addEventListener("input", e => {
+  const v = +e.target.value; if (v >= 0){ rate = v; try { localStorage.setItem("lfd-rate", String(v)); } catch {} render(); }
+});
+
+/* ---------- sample documents (drawn on canvas) ---------- */
+const SAMPLES = [
+  { key: "do", label: "Delivery order", make(){ return {
+      title: "DELIVERY ORDER", issuer: "HARBORLINE DRAYAGE CO.", issuerSub: "Wilmington, CA · Dispatch (555) 010-0177",
+      docNo: "DO# HD-" + (240000 + new Date().getDate()*37),
+      fields: [
+        ["CONTAINER NO.", makeCN("HRLU482913")], ["SIZE / TYPE", "40' HIGH CUBE"],
+        ["STEAMSHIP LINE", "MERIDIAN OCEAN LINES"], ["VESSEL / VOYAGE", "MERIDIAN CRESTA / 047E"],
+        ["PICK UP AT", "HARBOR TERMINAL 3, LONG BEACH"], ["DISCHARGED", ymd(addDays(-3))],
+        ["LAST FREE DAY", ymd(addDays(1))], ["SEAL NO.", "ML7731904"],
+        ["CONSIGNEE", "SUNRISE HOME GOODS LLC"], ["DELIVER TO", "1200 S DEMO WAY, ONTARIO CA 91761"],
+        ["PIECES", "1,240 CTNS"], ["GROSS WEIGHT", "18,450 LBS"], ["CUSTOMER REF / PO", "SHG-55120"],
+      ], style: "clean" }; } },
+  { key: "an", label: "Arrival notice", make(){ const lfd = addDays(4), dis = addDays(-1);
+      const f = d => d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+      return {
+      title: "ARRIVAL NOTICE / FREIGHT RELEASE", issuer: "BLUEWATER CONTAINER LINE", issuerSub: "Import Services · ref BWCL-IMP",
+      docNo: "B/L BWCL" + (77310000 + new Date().getDate()),
+      fields: [
+        ["NOTIFY PARTY / CONSIGNEE", "VALLEY CYCLE SUPPLY INC, FONTANA CA"], ["EQUIPMENT", makeCN("PCXU207746") + "  20' DRY"],
+        ["VESSEL", "BLUEWATER ARIA  V.112N"], ["PORT OF DISCHARGE", "LONG BEACH, CA — PIER SOUTH"],
+        ["DISCHARGE DATE", f(dis)], ["FREE TIME EXPIRES", f(lfd) + " (end of day)"],
+        ["PACKAGES", "410 CARTONS"], ["WEIGHT", "8,120 KGS"], ["SEAL", "BW-0098812"], ["YOUR REF", "PO VCS-4502"],
+      ], style: "notice" }; } },
+  { key: "ph", label: "Phone photo (tilted)", make(){ return {
+      title: "DELIVERY ORDER", issuer: "SUNCOAST CARTAGE", issuerSub: "Carson, CA · 24hr dispatch",
+      docNo: "DO 5519-" + pad(new Date().getMonth()+1),
+      fields: [
+        ["CNTR #", makeCN("TMBU915530")], ["SZ/TP", "40DV"], ["LINE", "MERIDIAN OCEAN LINES"],
+        ["TERMINAL", "HARBOR TERMINAL 3"], ["LFD", (d => pad(d.getMonth()+1) + "/" + pad(d.getDate()) + "/" + String(d.getFullYear()).slice(2))(addDays(-1))],
+        ["CONSIGNEE", "PINECREST FURNITURE CO"], ["DELIVER", "FONTANA, CA"], ["PCS / WT", "86 PLTS / 21,300 LB"], ["PO", "PFC-7710"],
+      ], style: "photo" }; } },
+];
+function drawDoc(doc){
+  const W = 900, H = 1160, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  const paper = () => {
+    g.fillStyle = "#fdfdfb"; g.fillRect(0,0,W,H);
+    g.fillStyle = "#111"; g.font = "bold 30px Arial, sans-serif"; g.fillText(doc.issuer, 60, 90);
+    g.font = "16px Arial, sans-serif"; g.fillStyle = "#444"; g.fillText(doc.issuerSub, 60, 118);
+    g.fillStyle = "#111"; g.font = "bold 26px Arial, sans-serif";
+    const tw = g.measureText(doc.title).width; g.fillText(doc.title, W - 60 - tw, 90);
+    g.font = "18px 'Courier New', monospace"; const dw = g.measureText(doc.docNo).width; g.fillText(doc.docNo, W - 60 - dw, 118);
+    g.strokeStyle = "#111"; g.lineWidth = 3; g.beginPath(); g.moveTo(60,140); g.lineTo(W-60,140); g.stroke();
+    let y = 175; const rowH = doc.style === "notice" ? 74 : 66;
+    g.lineWidth = 1; g.strokeStyle = "#888";
+    doc.fields.forEach(([k,v], i) => {
+      const twoCol = doc.style === "clean" && i < 12;
+      const col = twoCol ? i % 2 : 0, x = 60 + col * ((W-120)/2), w = twoCol ? (W-120)/2 : W-120;
+      if (twoCol && col === 1) y -= rowH;
+      g.strokeRect(x, y, w, rowH - 8);
+      g.fillStyle = "#555"; g.font = "bold 13px Arial, sans-serif"; g.fillText(k, x + 10, y + 20);
+      g.fillStyle = "#111"; g.font = (k.includes("FREE") || k === "LFD" ? "bold " : "") + "21px 'Courier New', monospace";
+      g.fillText(v, x + 10, y + 48, w - 20);
+      y += rowH;
+    });
+    g.fillStyle = "#555"; g.font = "13px Arial, sans-serif";
+    g.fillText("Driver must present this order at gate. Demurrage, per diem and storage charges apply after free time.", 60, H - 90);
+    g.fillStyle = "#b00"; g.font = "bold 14px Arial, sans-serif";
+    g.fillText("SAMPLE DOCUMENT FOR DEMONSTRATION — FICTIONAL COMPANIES", 60, H - 60);
+  };
+  if (doc.style !== "photo"){ paper(); return c; }
+  // phone-photo look: paper slightly rotated on a desk
+  const ctx2 = g;
+  const c2 = drawDoc({ ...doc, style: "plain" });
+  ctx2.fillStyle = "#6f655a"; ctx2.fillRect(0,0,W,H);
+  const grd = ctx2.createRadialGradient(W/2,H/2,100,W/2,H/2,800); grd.addColorStop(0,"rgba(255,255,255,.12)"); grd.addColorStop(1,"rgba(0,0,0,.35)");
+  ctx2.save(); ctx2.translate(W/2, H/2); ctx2.rotate(-0.035);
+  ctx2.shadowColor = "rgba(0,0,0,.45)"; ctx2.shadowBlur = 24; ctx2.shadowOffsetY = 8;
+  ctx2.drawImage(c2, -W*0.44, -H*0.44, W*0.88, H*0.88); ctx2.restore();
+  ctx2.fillStyle = grd; ctx2.fillRect(0,0,W,H);
+  return c;
+}
+
+/* ---------- scan flow ---------- */
+let currentBlob = null, ctl = null, timer = null;
+function setPreview(url){ const img = $("#preview"); img.src = url; img.hidden = false; $("#drop-hint").hidden = true; $("#read").disabled = false; }
+function setStatus(html, show = true){ const s = $("#status"); s.innerHTML = html; s.hidden = !show; }
+
+$("#samples").innerHTML = SAMPLES.map(s => `<button class="btn sm" data-sample="${s.key}">${esc(s.label)}</button>`).join("");
+$("#samples").addEventListener("click", e => {
+  const b = e.target.closest("[data-sample]"); if (!b) return;
+  const c = drawDoc(SAMPLES.find(s => s.key === b.dataset.sample).make());
+  c.toBlob(bl => { currentBlob = bl; setPreview(URL.createObjectURL(bl)); setStatus("", false); }, "image/jpeg", 0.9);
+});
+function takeFile(f){
+  if (!f || !f.type.startsWith("image/")) { toast("Choose a photo or image file."); return; }
+  currentBlob = f; setPreview(URL.createObjectURL(f)); setStatus("", false);
+}
+$("#file").addEventListener("change", e => takeFile(e.target.files[0]));
+const drop = $("#drop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); takeFile(e.dataTransfer.files[0]); });
+
+const FIELDS = ["container_no","size_type","last_free_day","customer","carrier","terminal","reference","seal_no","pieces","weight","vessel_voyage"];
+$("#read").addEventListener("click", async () => {
+  if (!currentBlob) return;
+  if (ctl) { ctl.abort(); return; }
+  ctl = new AbortController(); const t0 = Date.now();
+  $("#read").textContent = "Stop";
+  const tick = () => setStatus(`<span class="spinner" aria-hidden="true"></span><span>Reading the document… ${Math.round((Date.now()-t0)/1000)}s</span>`);
+  tick(); timer = setInterval(tick, 1000);
+  try {
+    const image = await toJpegBase64(currentBlob);
+    const r = await api("/api/extract", { image, mediaType: "image/jpeg", today: todayStr() }, ctl.signal);
+    fillForm(r && typeof r === "object" ? r : {}, (Date.now() - t0) / 1000);
+    setStatus(`<span style="color:var(--ok);font-weight:600">Read in ${Math.round((Date.now()-t0)/1000)}s.</span><span class="muted">Check the highlighted fields below.</span>`);
+  } catch (e) {
+    const stopped = e?.name === "AbortError";
+    setStatus(`<span class="${stopped ? "muted" : "note bad"}">${esc(stopped ? "Stopped." : e?.message || "Something went wrong reading the document. Try again.")}</span>`);
+  } finally { clearInterval(timer); ctl = null; $("#read").textContent = "Read with AI"; }
+});
+
+let reviewSource = "manual";
+function fillForm(r, secs){
+  reviewSource = secs != null ? "scan" : "manual";
+  for (const f of FIELDS){
+    const el = $("#f-" + f); let v = r[f] ?? "";
+    if (f === "container_no") v = normCN(v);
+    if (f === "last_free_day" && !/^\d{4}-\d{2}-\d{2}$/.test(v)) v = "";
+    el.value = v;
+    el.closest(".field").classList.toggle("unclear", Array.isArray(r.unclear) && r.unclear.includes(f));
+  }
+  const unclear = Array.isArray(r.unclear) ? r.unclear.filter(f => FIELDS.includes(f)) : [];
+  $("#review-note").textContent = secs != null
+    ? (unclear.length ? `${unclear.length} field${unclear.length>1?"s":""} flagged for a second look` : "All fields read") + (r.notes ? " · " + r.notes : "")
+    : "Manual entry";
+  $("#review").hidden = false; cnCheck();
+  $("#review").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+}
+function cnCheck(){
+  const st = cnState($("#f-container_no").value), n = $("#cn-note");
+  n.className = "note " + (st === "ok" ? "good" : st === "empty" ? "" : "bad");
+  n.textContent = { ok: "Valid container number (check digit matches).", empty: "",
+    format: "Should be 4 letters ending in U, then 7 digits.",
+    check: "Check digit doesn't match. Compare with the number on the container door." }[st];
+}
+$("#f-container_no").addEventListener("input", cnCheck);
+$("#manual").addEventListener("click", () => fillForm({}, null));
+$("#cancel").addEventListener("click", () => { $("#review").hidden = true; });
+$("#form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const r = {}; for (const f of FIELDS) r[f] = $("#f-" + f).value.trim();
+  r.container_no = normCN(r.container_no);
+  if (!r.container_no){ toast("Add a container number first."); $("#f-container_no").focus(); return; }
+  const exists = rows.some(x => normCN(x.container_no) === r.container_no);
+  Object.assign(r, { status: "at_terminal", source: reviewSource, created: Date.now() });
+  $("#add").disabled = true;
+  try { await saveRow(r); $("#review").hidden = true; toast(exists ? `Updated ${r.container_no} on the board.` : `${r.container_no} added to the board.`); }
+  catch (err) { toast("Couldn't save: " + (err?.message || "try again")); }
+  $("#add").disabled = false;
+});
+
+/* ---------- customer email draft ---------- */
+let updCtl = null;
+async function draftUpdate(id){
+  const r = rows.find(x => (x._id || normCN(x.container_no)) === id); if (!r) return;
+  const panel = $("#update-panel"), ta = $("#upd-text");
+  panel.hidden = false; $("#upd-for").textContent = r.container_no + " · " + (r.customer || "customer");
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  updCtl?.abort(); updCtl = new AbortController();
+  ta.value = "Drafting…";
+  const d = daysUntil(r.last_free_day);
+  const facts = { today: todayStr(), container: r.container_no, size: r.size_type, customer: r.customer, reference: r.reference, pieces: r.pieces,
+    steamship_line: r.carrier, terminal: r.terminal, last_free_day: r.last_free_day, days_until_lfd: d,
+    status: r.status === "at_terminal" ? "still at the terminal, not yet picked up" : "picked up and at our warehouse" };
+  try { const { text } = await api("/api/draft", { facts }, updCtl.signal); ta.value = text; }
+  catch (e) { if (e?.name !== "AbortError") ta.value = e?.message || "Couldn't finish the draft. Try again."; }
+}
+$("#upd-copy").addEventListener("click", async () => {
+  const ta = $("#upd-text");
+  try { await navigator.clipboard.writeText(ta.value); toast("Copied."); } catch { ta.select(); toast("Selected. Press Ctrl/Cmd+C to copy."); }
+});
+$("#upd-close").addEventListener("click", () => { updCtl?.abort(); $("#update-panel").hidden = true; });
+
+/* ---------- boot ---------- */
+$("#logout").addEventListener("click", async () => { try { await api("/api/logout"); } catch {} location.href = "/login.html"; });
+render();
+(async () => {
+  try {
+    const r = await fetch("/api/session", { credentials: "same-origin" });
+    if (r.status === 401) { location.replace("/login.html"); return; }
+    if (!r.ok) { const b = $("#banner"); b.hidden = false; b.textContent = "The server isn't set up yet: add APP_PASSWORD and ANTHROPIC_API_KEY in Vercel, then redeploy."; }
+  } catch { const b = $("#banner"); b.hidden = false; b.textContent = "Can't reach the server. Check your connection."; }
+  const saved = loadSaved();
+  if (saved) rows = saved;
+  else { rows = exampleRows().map(r => ({ ...r, _id: normCN(r.container_no) })); persist(); }
+  render();
+})();
+setInterval(render, 60 * 60 * 1000); // keep day counts fresh if left open
+})();
+</script>
+</body>
+</html>
